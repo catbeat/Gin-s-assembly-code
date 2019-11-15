@@ -1,0 +1,1545 @@
+#ASSEMBLY LANGUAGE#
+
+
+Computer is composed of various coponents
+
+-> so:
+	there exists instruction to tell computer what to do
+
+They are called:
+Machine code  10101010101001B
+
+CPU transfer the machine code into electric volt to run the computer
+
+
+\\Let's try sth.
+
+DOSBOX debug -u
+
+The list is:
+
+a series of same hexa numbers: a code in hexa  some code in hexa  some english words  some number
+eg.
+073f:0100 7403 JZ 0105
+
+Here:	
+	073F:0100 memory No.
+	7403 is machine instruction
+	JZ 0105 is assmbly instruction
+
+The translator between machine instruction and assembly one is just compiler.
+
+
+For assmebly language:
+1.assemble instruction      The compiler use this to translate into machine code
+2.pesudo instruction        Told compiler how to translate here or there
+3.symbol system             +-*/ controled by compiler
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+		Where to place the assmebly instruction?
+
+RAM 内存条   or say Main memory
+Most of the assembly instruction is stored in Main memory
+
+\\Let's try sth.
+
+DOSBOX DEBUG -u -d
+
+-u there is machine instruction and assemble instruction
+-d there is data
+
+-> So from apperance:
+	data is instruction, instruction is data
+
+
+More thing we can see:
+	The smallest unit of memory:
+	2 hexa bit
+
+	that is 1 B = 8 bit
+
+
+
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+
+CPU stores parts of the instructions
+
+Most of them is in memory
+
+Data and instruction is the same in memory, only cpu to tell them apart
+
+
+
+CPU and memory is connect by the electric way in main board
+
+There is three information we need to let cpu and memory contact:
+1. The memory address no.                  ==               Address line
+2. The data stored in the memory           ==               Data line
+3. write or read			   ==               Control line
+
+
+As the smallest memory unit is 1 B
+-> so: one address line connect to 1 B
+
+Since one address line has only two status: 1 or 0
+so it's impossible for one line to get the No3 information.
+
+So how many lines depend on how large memory to reach.
+Also , the memory no. is obviously start from 0.
+
+Let n = the number of address line
+It can display 2^n address no.
+
+
+e.g. 
+The ability of find address is 8KB
+
+we need 13 address line.
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Address line : determines the ability to find address
+
+Data line ; how large data can be transported
+
+Control line :
+
+
+
+As all the data is just a mass of binary bit
+
+So one line to transport one bit
+e.g.
+16 line to transport 2B data
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+\\ Let's try sth.
+
+DOSBOX debug -e B800:400
+1 space 1 space 2 space 2 space
+
+However this is not memory but video card
+
+that's to say memory or say memory space:
+		     		     -  main memory 内存条    start address no. - end address no.
+cpu control -      main board	     -  video card            start address no. - end address no.
+		                     -  ROM 
+
+
+
+RAM:
+	allow to read and write but will lose
+ROM:
+	don;t allow to write but always store
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+			how cpu contact with keyboard or microphone or ....
+
+
+Port 端口   ->       transport data
+
+
+cpu is just a chip 
+
+mouse or keyboard also have chip
+
+chip -> store data and instruction
+
+e.g
+
+									cpu
+
+									 |   through three kinds of line
+
+keyboard give data to -  port give data through three electric line- main board
+
+
+
+
+
+			How cpu get to port like address
+
+through port no.
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+GPU : 图形处理芯片
+
+Originally there isn't gpu , it done by cpu
+
+Nowadays they 分工 due to the huge work of dealing graphics
+
+gpu has its own code.
+
+
+
+We can treat B800:0000 and later as video card
+
+Assemble language is for cpu
+
+Since there is three line:
+So cpu has place to store address information data information and control information
+
+That is register (寄存器)
+
+Assemble language control this to control cpu so computer is controlled
+
+AX register  is       data register
+There is also address register and so on
+
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+AX,BX,CX,DX is general register to store data , data register
+
+They are hex register, from 0 to 2^16-1
+
+However, they can divided into octo register
+
+The first eight bit is AH high oct register
+The last eigth bit is AL low oct register
+
+
+Purposes One: to be compatible with the former program with oct register
+
+Purpose Two: hex register with 16 data line can handle two kinds of information
+
+1 Byte 字节型数据
+Or
+2 Byte 字型数据
+
+for 2Byte the first eight bit 高位字节
+	  the other           低位字节
+
+this is special for AX ,BX ,CX, DX because onlly them can divided 16 register to 8 register
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Address Register
+
+073F:0100
+段地址：偏移地址
+Segement address: Offset address
+
+In cpu 
+Segement Address Register:         Offset address Register:
+ds				   sp
+es				   bp
+ss				   si
+cs				   di
+				   ip
+				   bx
+
+
+The physics address = segement address * 16D(10H) + offset address
+
+That's because:
+	In 80x86 cpu, there is 20 address line, however the address just four hexa digit that is to say the address no. it can display is 0000 - FFFF, but the 
+ability of finding address is actually from 00000 - FFFFF
+
+As a result :
+	The designer figure out a way that use two four hexa digit address to represents the five hexa digit real physics address as 80x86 cpu only has the ability
+to represents a four hexa digit address.
+
+
+\\ Let's try sth.
+
+
+-a
+mov bx, 1000
+mov ds,bx
+mov ax,[0]
+
+the above code:
+	1. we put 1000H into bx, a data register
+	2. we put the value of bx into ds, a address register, since ds is a segement address register, so now the segement address in ds is 1000H rather than the 073F
+	which we always see
+	3. this time we try to get the data from the memory unit rather than the register , '[...]' represents a memory unit, the content represents the offset address,
+	when the code run , by default it takes the value of ds as the segement address. So for this code, it's actually try to move the data in address no. 1000H * 10H + 0H
+	that is 10000H into the ax, a data register.
+
+
+	* ps: here we can't directly use mov ds,1000 to set the segement address due to the physics design of 80x86 cpu, so we need to use a transfer register, say bx
+		to help us move the new address into ds.
+
+
+
+The calculation is done by address adder!
+
+
+However ! 	What's the cost?
+
+Once you input the wrong segement address , you can never get the physics address due to the limitation.
+
+
+
+
+\\ let's try sth.
+
+debug
+-d segement address: offset address
+-e 1 space 1 space (repeat for some times)
+-d segement address: offset address
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+Previously we always use instruction -u and -d and found some relationship between them
+
+Actually:
+u :  treat the digits stored from certain start address as instruction.
+d :  treat the digits stored from certain start address as data.
+
+
+Originally when you input -u instruction: you can always see 073F:.... 
+However you will also see that ds,cs,ss,es also store 073F. which point to this?
+
+Also when we use -a to revise instruction, the digits stored by IP is also changed.
+
+\\ Let's try sth.
+-r ds 0
+-r
+
+then you will find ds is changed but address still start from 073F
+
+Until you try cs you will find it changed.
+
+
+
+
+Actually
+
+80x86 cpu treat all the digits from CS:IP as instructions
+
+That's how cpu tell apart data and instructions. Since in memory data and instructions are the same, are binary bits.
+it's sensible to assign certain part as the instrcutions.
+
+In fact: CS is called Code Segement register(CS)代码段寄存器  IP is called Instruction Pointer rregister(IP)指令指针寄存器
+
+\\ Let's try sth.
+-r CS
+2000
+-e 2000:0000
+B8 24 10 BB 24 10
+-u
+-t
+-t
+
+
+so this time the data after 2000:0000 is treated as instructions
+
+The following picture is a summarized process:
+
+
+
+CPU						              memory
+---------------------------------------------                 -----------       
+AX-------                    addree adder                      B8            20000H
+                 CS 2000     ------------		       24	     20001H    B82410 : MOV AX,1024
+  -------        IP 0000				       10	     20002H
+              
+BX-------		     ------------			
+				  ||
+  -------			  ||		     
+				  \/	   
+
+    instruction buffer       -------------
+	-------	      <--		       20 address line
+	-------					 ------------
+	   |					   data line
+	   |					 ------------
+	-------		     -------------
+	-------	         input output circuits
+	executor
+----------------------------------------------
+
+
+Whenthe cpu read the data after CS:IP, it will treat it as instruction and put thenm into instruction buffer.The ip will += the length of instruction. Then it will execute. 
+
+
+
+
+
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+Revise CS and IP in Assemble Language
+
+Assemble Instruction :          jmp       转移指令
+
+\\et's try sth.
+-a jmp 2000:0
+-t
+
+Then you will find CS and Ip is changed.
+
+
+Since the 80x86 cpu don;t allow mov cs and mov ip and also mov ip,ax
+we an use jmp
+
+Another Grammer:
+jmp register
+
+== mov ip,register  seemingly the same meaning but not available
+
+
+*ps: if a instruction follow a jump instruction. it will only be pointed but not readed into instruction buffer.
+
+
+
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+
+
+debug tool
+
+r                   check the content or revise it in the register
+
+	-r register         change the content in register
+
+
+d                  check the content in the memory
+
+	-d segement address:offset address            			 the memory start from the input address(default CS:IP if there isn't)
+	-d segement address:start offset address  end offset address     the memory start from the input start and end at the input end
+
+
+u		   show the content in memory as assemble instruction
+
+	-u segement address:offset address                               the memory start from the input address
+	-u segement address:start offset address  end offset address     the memory start from the input start and end at the input end
+
+
+a		   put the data of assemble language into memory
+
+	-a segement address:offset address  assemble instructions        put the assemble language data into memory
+
+
+t                 execute the instructions pointed by CS:IP
+
+
+e		  revise the content in the memory
+
+	-e segement address:offset address				 the memory start from this, use space to continuesly revise every byte
+	-e segement address:offset address "string"                      from the start memory stored into the ASCII code of the string
+
+
+
+#######################################################################################
+#
+#  register
+#
+# #####################################################################################
+
+
+where does the instruction "call" store the IP address?
+
+
+First let us see the type of data
+
+1.byte data(字节型数据)      1Byte
+2.word data(字型数据)        2Byte
+
+so a word data in memory is represented in two memory unit
+
+the high address store the high byte
+the low address store the low byte
+
+that's why the machine code of "MOV ax, 1024" is "b8 24 10"
+
+(suppose b8 stored in 2000:0000)
+24 is the low byte , so stored in low address 
+10 is the high byte , so stored in high address
+
+##########################################################################################
+
+
+mov the data in memory into register
+
+as we said , ds is a segement address register and also dosbox use it as a default register
+
+we can use instruction like: mov ax,ds:[0]      or    mov al, ds:[0]
+
+			     here we give the offset address, the content in the [] is read	
+
+			     that's how we operate on memory unit
+
+
+
+However, in dosbox, it didn't support such kind of format
+
+Since teh default register is DS, we can then write the instruction like : mov ax,[0]
+
+
+we just enter the offet address.
+
+
+
+More importantly, the compiler decide which kind of data you want to read based on the type of
+
+register. AX then word data, al then byte data.
+
+
+
+we make a brief conclusion to instruction mov:
+1. mov register, register
+2. mov register, data
+3. mov register, [offset address]
+
+
+###########
+mov add sub             
+###########
+
+
+##############################################################################################
+
+data segement
+
+: it's just an arrangement of coding
+
+e.g.            10000H    01
+	        10001H    02
+		10002H    03
+
+this is how you store byte data
+
+However
+
+		10000H     01
+		10001H     00
+		10002H     02
+		10003H     00
+		10004H     03
+		10005H     00
+
+this is how you store word data
+
+
+###############################################################################################
+
+
+// now we can make a conclusion:
+
+CS:IP       decide where is instructions
+DS          decide where is data
+
+
+
+
+
+################################################################################################
+#
+# stack
+#
+################################################################################################
+
+
+
+stack:
+
+to predict the program with data structure
+
+LIFO rule
+
+
+################################################################################################
+
+
+For stack , we need two operation :
+
+push register/memory          push the data in register/memory into the stack, renew the pointer to the top of stack
+
+pop register/memory           pop up the data from the stack and put it into register/memory, renew the pointer to the top of stack
+
+
+
+Other things we need to consider
+
+
+
+
+
+
+
+
+
+
+
+
+
+In 8086 cpu
+
+we use segement address register SS and offset address register SP treated as the top of the stack
+
+As a result
+
+push register/memory          SP -= 2  restore the data into memory unit SS:SP
+
+pop register/memory           get the data from SS:SP and store into register
+
+
+As you can see:
+
+the stack is developed from high address to low address
+
+
+
+# Here comes a question:
+
+what about the stack is empty?
+
+so the SS:SP point at the address higher than the first word data will be
+
+
+
+PS: when you pop out the data, it didn't eliminate, it still in memory but once you push another things it will be covered
+
+############################################################################################################################
+
+
+As the top of stack is decided by ss:sp at any time
+so where we put the stack and how much is the stack is all decided by programmer.
+
+Once you determine the length(bytes) and the terminal address(it must be the lowest one),
+
+then the origin top ss:sp is nothing but terminal ss:sp + 16(10H)
+
+
+!!!!
+Let's try sth:
+
+debug
+-a
+mov ax,2000
+mov ss,ax
+mov sp,10
+-t
+-t
+
+you will find that when you execute mov ss,ax
+the instruction mov sp,10 is also executed
+
+
+! So far, Just remember it.
+
+#################################################################################################################################
+
+stack out of the bounds, overflow
+
+
+we may pick a extreme example
+
+e.g 
+
+ss:sp = 2000:0010
+
+when you execute push ax for eight times
+
+it will become ss:sp = 2000:0000
+
+if you do it again
+
+it will be 2000:FFFE
+
+That may not only cover other important data but also to some extent didn't follow the development of a stack from high to low
+
+
+
+// safety problem
+check the stack length don't overflow
+
+
+
+what about the max length ?
+
+Of course the range of SP
+
+that is to say 65536 bytes that is 32768 word data
+
+
+now you will find ss:sp = 2000:0000 can help you to cover all the range of SP, quite like the above examples.
+
+Once the sp = 0 again and you push, it will cover the originally pushed data.
+
+###################################################################################################################################
+
+The function of Stack
+: temporarily store the data
+
+now we can go back to the assemble instruction call and ret
+
+call will help you jump to another instruction segement
+
+and then ret help you to go back to go on execute the left instructions.
+
+so actually the next address of instruction call is stored in stack
+
+and ret pop it out.
+
+
+
+!!!!
+This explain why when we design cpu , we want the IP to increase even after the instruction which can jump
+
+because we can store where the IP point and then return back if necessary
+
+The stack is also the function stack we often use in senior programming language, also why we say use a function as call a function
+
+ret is just return it help to pop out the stack and go on execute the external function segement.
+
+#####################################################################################################################################3
+
+Although we already said when we pop out the data still exist, it just revise the sp
+
+However, when you do it , you will find it isn't true.
+
+e.g
+
+debug
+a
+mov ax,2233
+push ax
+pop ax
+d (address to check)
+
+you may find it become A3 01 (01A3 actually)
+
+In fact, this data come when you execute mov ax, 2233
+
+you will see a list of data is already put
+33 22 00 00 03 01 3f 07 A3 01
+
+Here 33 22 is the data of ax
+00 00 is the data in register BP
+03 01 is of course the data in IP
+3f 07 is the data in CS
+
+later will tell the reason
+
+##########################################################################################################################################
+
+before we go to the coding part
+
+there is sth. to mention:
+
+1. safety
+
+it's very dangerous to use instruction like a,e to directly control the memory
+
+it will make program or even system crash
+
+Usually we use the memory distributed by operating system
+
+it help us to distribute different memory for different program and itself memory
+
+So with the operating system, under its allowance program can get memory
+
+1. when loading the program the os will distribute memory
+2. during the running, program can ask for extra memory
+
+
+
+PS: 0:200 - 0:2ff this segement is safe memory, no program will use it, but it's too small
+
+2.exe
+
+source code 
+
+after compile -> link -> exe
+
+when exe is going to run , os give it memory , which is safe
+
+###############################################################################################################################################
+#
+# program
+#
+################################################################################################################################################
+
+compile
+
+compile asm -> obj
+
+link
+
+link obj -> exe
+
+why we need two step
+
+because we can divide a project into many parts and compile respectively, so if there is any change , we just compile the changed one
+
+
+
+#################################################################################################################################################
+
+exe
+
+
+how does the os know how much memory to give the exe
+
+Because except code, it also provide discriptive information: how large is the document, where the program starts
+
+
+
+That's what pesudo instruction "start" do
+
+to help record the entry point of program
+
+Then os know how to set cs:ip
+
+
+PS: you can link the obj by yourself and ask it to generate a map document, you can see the extra information
+
+
+####################################################################################################################################################
+
+Source code
+
+assemble code is composed of:
+
+1.assemble instruction
+2.pesudo instruction      (tell compiler)
+3.symbol                  (compiler will deal with things like integer or calculation)
+
+
+
+
+
+
+
+
+See this code:
+
+assume cs:code,ds:data,ss:stack
+
+data segment
+	db	128 dup (0)
+data ends
+
+stack segment stack
+	db	128 dup (0)
+stack ends
+
+
+
+code segment
+
+	start:	mov ax,stack
+		mov ss,ax
+		mov sp,128
+
+
+
+		mov ax,4C00H
+		int 21H
+
+
+
+code ends
+
+
+
+end start
+
+
+pesudo syntax: segement, ends
+
+to define a segement, to store code, data or stack
+
+
+pesudo syntax: end
+
+tell the compiler the program is over
+
+
+pesudo syntax: assume
+
+connect the label of segement to the corresponding register
+
+
+
+assemble program
+
+they will compiled into machine code and stored into exe
+
+
+Label
+
+it just represent an address, the label will be compiled into the segement address of that segement
+
+
+Return of program
+
+mov ax, 4c00h
+int 21h
+
+they realize the return
+
+then os will release the memory occupied by this program
+
+
+################################################################################################################################################
+
+
+Who put the exe into memory to let it run?
+
+In DOS, if program p1 is going to run, there must be a program p2 to load it into memory and transfer the right to control cpu
+
+after done, p1 will return back the right to control
+
+
+
+
+
+For any general OS, they will provide shell program which is used by user to operate computer system
+
+In DOS, it's called command.com, the shell of DOS(命令解释器)
+
+when DOS is started, it finish the initialization and then it will run command.com, when command.com finish relative task, it will show the path
+
+corresponding to the current path like : "c:/", "c:/wiindows"
+
+So when user want to run a exe, command find it and load it into memory and set CS:IP. Then command will stop running, cpu will run the exe, when 
+
+it finish, return back to command
+
+#####################################################################################################################################################
+
+
+Program tracking
+
+
+
+we can use instruction "debug" to track it
+
+when we use Debug.exe, it didn't give up the control of cpu, so we can run the program one by one
+
+debug will help to load the program into memory and set cs:ip
+
+
+when debug finishing loading the program into memory
+
+use "r" to check register, in CX, it store the bytes length of program
+
+
+
+
+PSP district
+
+from ds:0 to ds:100  total 256 bytes
+
+DOS system use this district to contact with the loaded program
+
+After psp it's just the loaded program
+
+so the address is just cs:ip(if the code is put at first)
+
+
+#########################################################################################################################################################
+
+
+something about coding;
+
+1.if the data is start with alpha, eg. B800H then write it as 0B800H
+
+2. remeber the difference between 10 and 10H
+
+3. ; is notation
+
+
+
+///////////////
+
+conclusion
+
+exe is runned by cpu and os control it. So run exe is just let os to distribute memory to it.
+
+
+
+
+
+
+#############################################################################################################################################################
+#
+# BX and loop
+#
+#############################################################################################################################################################
+
+to get a data, we need:
+
+1. address
+2. length
+
+
+
+BX : an offset address register
+
+mov bx, 0
+
+then mov ax,[0]  = mov ax,[bx]
+
+it's just like this.
+
+
+Here we define a descirptive symbol "()"
+
+(ax) means the content in ax
+so as (21000H) 
+
+
+
+!!!
+
+assemble instruction : inc
+
+inc bx   means (bx) += 1
+
+why we use this: because  add bx,1   B3C301
+			  inc bx     43
+
+it require less memory
+
+Later we will mention further difference
+
+###################################################################################################################################################
+
+
+LOOP
+
+Let's try sth.
+
+assume cs:code
+
+code segement
+
+	mov ax,2
+	mov cx,9
+
+s:	add ax, ax
+	loop s
+
+	mov ax,4c00H
+	int 21H
+
+code ends
+
+end
+
+this program aims to calculate 2^10 
+
+Here s is a setNumber(标号)
+set number : represents an address, and in that address there is instruction "add ax,ax"
+
+LOOP set number
+
+loop : cx -= 1
+	if cx == 0:
+		next code
+	else:
+		goto set number
+
+That's how we use loop
+
+
+
+
+Originally we may use jmp to go back to previous code
+
+In assemble code, jmp 0006H is unavailable
+	 	  but jmp set number is available
+
+we can make it as:
+s:	add ax,ax
+	jmp s
+
+However we don't know when to stop.
+
+
+So we use loop, for some parts of function they are similar
+
+
+
+
+
+PS: 
+when you debug for loop, use instruction p to directly execute the loop
+
+
+Another PS:
+when you debug , if you want to get to certain instruction, use instruction g IP(address) to get there, it will automatically execute the previous code.
+
+
+
+
+#####################################################################################################################################################################
+
+
+The difference of instruction in debug and masm
+
+in debug mov ax,[0] means mov ax, ds:0
+in masm  mov ax,[0] means mov ax, 0
+
+however mov ax,[bx] is the same
+
+
+usually we can add mov ax, ds:[bx] or mov ax, ss;[bx]
+
+This is called segment prefix to explicitly state the segment address
+
+
+
+####################################################################################################################################################################3
+#
+# contain more segments
+#
+#####################################################################################################################################################################
+
+
+it's dangerous for us to use mov ds,ax to revise data segment
+
+we should let os to distribute memory for us
+
+
+Syntax: dw
+
+dw    1H, 2H, 3H, ....
+
+d means define
+w means word
+
+so actually it means we define a series of word data in a continous memory
+
+So we should also adjust where the code start
+
+start: 
+	...
+
+s:
+	..
+
+code ends
+
+end start
+
+
+Here end has another function, it tell the commpiler where the code starts, that is the label right after the end, so compiler can give it descriptive information
+
+This descriptive information help os to distribute and also set cs:ip
+
+
+###############################################################################################################################################################
+
+
+Put data, code and stack into different segment
+
+Since a segment can only contain maximum 64KB, so if data, code an stack exceeds it can't hold any more
+
+
+
+One thing to remember, usually the os will districute 16^n bytes to a segment , so even your own data segment just contain one byte, the actual data segment 
+is 16B. if it's 33B, the data segment will be 48B.
+That's also the case for code segment and stack segment.
+
+
+
+
+
+
+
+PS: When you see other documents, you will find the capacity and how much it occupied is not equal, to some extent the principle.
+
+
+###################################################################################################################################################################3
+#
+# More effective way to locate the address
+#
+#####################################################################################################################################################################3
+
+
+And and Or instruction
+
+or al, 00100000B
+
+and al, 11011111B
+
+to some extent the same as C
+
+
+######################################################################################################################################################################
+
+si and di is also offset address segment
+
+so it can also act as bx
+
+mov ax, [si]
+mov ax, [si + di]
+mov dx, [bi + 5]
+
+####################################################################################################################################################################
+
+dw 'BASIC'
+
+it allow you to conveniently input the ata, you don't need to remember ASCII, and this is done by compiler.
+
+Also you do:
+
+mov ax, 'Be
+
+####################################################################################################################################################################
+#
+#Deal with Data
+#
+###################################################################################################################################################################
+
+Originally , we know the length of data through the register
+
+e.g mov ax, 1
+    mov al, 1
+
+first is word , next is byte
+
+what about mov ds:[0], 1
+the compiler will have no idea what kind of data you want to input
+
+So here we should use syntax, "word ptr" or "byte ptr"
+
+mov word ptr ds:[0], 1
+mov byte ptr ds:[0], 1
+inc byte ptr [bx]
+
+
+######################################################################################################################################################################
+
+div instruction
+
+Numerator:  Default in ax, or in ax and dx
+	    if denominator is 8bits , then numerator is 16 bits, stored in ax
+	    else if denominator is 16bits, then numerator is 32 bits, high 16 bits in dx, low 16 bits in ax
+
+	    as for the consequence
+	    if denominator is 8bits, then al stores the quotient, ah stores the remainder
+	    else if denominator is 16 bits, then ax stores the quotient, dx stores the remainder
+
+div 's format
+
+div register
+div ptr memory
+
+
+
+Some problems in div;
+1. if numerator is bigger thsn 65535, then you must use 32 numerator
+2. e.g, 10001H/1H, which quotient is 10001H, however, it disobey the rule as ax stores the quotient and dx stores remainder because it overflowed.
+
+
+
+
+#########################################################################################################################################################################
+
+
+dd pesudo instruction 
+
+dd  define  dword
+it's 32 bits
+
+#############################################################################################################################################################################
+
+
+dup instruction
+
+db 100 dup(0) means define 100 byte 0
+
+so as
+
+dd 100 dup(0) means define 100 double word 0, totally 300 bytes.
+
+############################################################################################################################################################################# 
+#
+# jmp instruction
+#
+#############################################################################################################################################################################
+
+
+offset instruction 
+
+
+to get the offset address of the label 
+
+for example mov ax, offset data
+
+##############################################################################################################################################################################
+
+
+jmp instruction executation
+
+jmp's machine code
+
+it's actually EB the data length between the destination of the jmp and the isntruction right after the jmp instruction
+
+that is the address of label address - address right after the jmp instruction
+
+
+
+IF the label is before the jmp instruction, that will be seem like overflow, but actually it's nothing but the 2 s complement of negative number.
+
+
+So this is just the displacement
+
+the range of its jmp rang is just the displacement range from -128 ~ 127 just as 2's complement
+
+This is 8 bit displacement
+
+For 16 bit displacement , it's -32768 ~ 32767
+
+
+
+
+To explicitly use the 8 bit dispalcement      (short jump)
+
+the instruction is as following
+
+jmp short label
+
+
+To explicitly use the 16 bit displacement        (near jump)
+
+the instruction is as following
+
+jmp near ptr label
+
+
+#######################################################################################################################################################################################333
+
+
+Displacement and Expr. 8                !!!!!!!!!!!!!!!!!!!!!!!
+
+although the assemble instruction is jmp short label
+
+however, in machine code , it's nothing but "EBXX", XX is a dispalcement
+
+so if we put this code to another address, it will no longer jmp to the same label, 
+Instead, it will jmp according to the displacement
+
+
+So very important!  
+
+jmp jump based on displacement rather than label
+
+############################################################################################################################################################################################
+
+Conditional jump instruction
+
+all the conditional jump instruction is short jump
+
+and all the displacement is calculated when compiled
+
+jcxz 
+
+when cx = 0, jmp 
+
+#############################################################################################################################################################################################
+
+
+jmp far ptr label        (long jump)
+
+jump between segment
+
+its machine code is EAXXXXXXXX (directly the destination address)
+
+this is also the machine code of jmp address
+
+which is only available in debug 
+
+
+jmp register
+
+just let ip = [register]
+
+
+
+
+what about the address is in the memory
+
+jmp word ptr address      (jump in segment)
+
+it just let ip = [address]
+
+
+jmp dword ptr address     (jump between segment)
+
+it just let cs = high word, ip = low word
+
+
+
+
+
+
+From now we even get another skill
+
+we can organize the offset address of label as data and then use it to jmp 
+
+
+#####################################################################################################################################################################################################
+#
+# CALL and RET
+#
+#####################################################################################################################################################################################################
+
+
+ret instruction:
+
+let ip = [ss*10H + sp]
+	sp += 2
+
+which is same as pop ip
+but this code is not available
+
+
+retf instruction:
+
+let ip = [ss*10H + sp]
+	sp += 2
+    cs = [ss*10H + sp]
+	sp += 2
+
+which is same as pop ip 
+		 pop cs
+
+but this code is not available
+
+
+######################################################################################################################################################################################################
+
+
+call instruction:
+
+(1): based on displacement address
+
+call 
+
+which is same as:
+
+push ip (ip after the call instruction)
+jmp near ptr label
+
+but this code is not available
+
+
+(2): based on the distination adddress in instruction
+
+call which is same as:
+
+push cs
+push ip
+
+jmp far ptr label
+
+
+(3): the destination address in 16bit register
+
+call register
+
+which is same as:
+
+push ip
+jmp register
+
+
+(4): the destination address in memory
+
+call word ptr
+
+push ip
+jmp word ptr
+
+
+
+call dword ptr
+
+push cs
+push ip
+jmp dword ptr
+
+
+
+##############################################################################################################################################################################
+
+
+mul isntruction
+
+8 bit multiplication or 16 bit multiplication
+
+if 8 bit:
+one is default supposed to be stored in al, another in other 8bit register or byte ptr address
+
+mul bl
+mul byte ptr ds:bx
+
+the result will be stored as 16 bit in ax
+
+
+
+if 16 bit
+
+one is default sopposed to be stored in ax, another in other 16bit register or word ptr address
+
+mul bx
+mul word ptr ds:bx
+
+the result will be stored as 32bit, the low 16bit in ax , the high 16 bit in dx
+
+
+#############################################################################################################################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
