@@ -1620,6 +1620,26 @@ e.g mov al, 1
     add al, 2
 
 
+4) SF Flag
+
+to record the result of the calculation is positive or not corresponding to the signed int
+
+if negative, sf = 1
+
+in dosbox, it will show NG 
+
+which means "negative"
+
+else, sf = 0
+
+in dosbox, it will show PL
+
+which means "positive"
+
+
+e.g add al, 81
+    sub al, 80
+    sub al, 2
 
 
 
