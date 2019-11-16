@@ -1642,6 +1642,24 @@ e.g add al, 81
     sub al, 2
 
 
+5) OF Flag
+
+to record the result of the calculation overflow or not
+
+if overflow, of = 1
+
+in dosbox, it will show OV
+
+which means "overflow"
+
+else, of = 0
+
+in dosbox, it will show NV
+
+which means "No overflow"
+
+e.g mov al, 80H
+    sub al, 1
 
 
 
