@@ -1528,6 +1528,97 @@ the result will be stored as 32bit, the low 16bit in ax , the high 16 bit in dx
 
 
 #############################################################################################################################################################################
+#
+# Flag register
+#
+#############################################################################################################################################################################
+
+
+Flag register
+
+15	14	13	12	11	10	9	8	7	6	5	4	3	2	1	0
+				OF	DF	IF	TF	SF	ZF		AF		PF		CF
+
+
+1) CF Flag       'Carry Flag'
+
+to record the carry or borrow for the calculation of unsigned int 
+
+if has borrow or carry , it will be 1
+
+in dosbox, it will show CY 
+
+which means "carry yes"
+
+
+if not, it will be 0
+
+in dosbox, it will show NC
+
+which means "No carry"
+
+
+e.g mov al, ff
+    add al, 1
+
+e.g mov al, 1
+    sub al, 2
+
+
+!Remark
+Mostly repond to the calculation instruction rather than move instruction
+
+
+
+2) ZF Flag         'Zero Flag'
+
+to record whether the result of the calculation is 0
+
+if zero, zf = 1
+
+in dosbox, it will show NZ
+
+which means "Not Zero"
+
+else, zf = 0
+
+in dosbox, it will show ZR
+
+which means "Zero"
+
+
+e.g mov ax, 100
+    mov bx, 100
+    sub ax, bx
+
+e.g mov ax, 1
+    and ax, 0
+
+
+!Remark 
+Mostly repond to the calculation instruction rather than the move instruction
+
+
+3) PF Flag	    'Parity Flag'
+
+to record the bit of the result of the relative instruction's parity of 1 is even or odd
+
+if even, pf = 1
+
+in dosbox, it will show PE
+
+which means "Parity even"
+
+else, pf = 0
+
+in dosbox, it will show PO
+
+which means "Parity odd"
+
+
+e.g mov al, 1
+    add al, 2
+
 
 
 
