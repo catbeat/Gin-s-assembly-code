@@ -1662,7 +1662,77 @@ e.g mov al, 80H
     sub al, 1
 
 
+##################################################################################################################################
 
+
+adc instruction
+
+inituitively adc means 'add with carry'
+
+so if with carry 
+
+it 's actually can be treated as a + b + CF
+
+e.g	mov ax, 1000H
+	mov bx, FFFFH
+
+	mov cx, 1000H
+	mov dx, 0001H
+
+	add bx, dx
+	adc ax, cx
+
+	mov ax, 4c00H
+	int 21H
+
+so actually this example finishes a 32bit int addition
+
+
+##################################################################################################################################
+
+sbb instruction 
+
+inituitively sbb means 'sub with carry'
+
+so if with carry
+
+it's actually can be treated as a - b - CF
+
+e.g	mov ax, 0001H
+	mov bx, 0000H
+	
+	mov cx, 0000H
+	mov dx, FFFFH
+
+	sub bx, dx
+	sub ax, cx
+
+	mov ax, 4c00H
+	int 21H
+
+so actually this example finishes a 32bit int substraction
+
+####################################################################################################################################
+
+cmp instruction
+
+it means compare two value
+
+it will not revise anyting except Flag register
+
+it just compare the result of ax - bx it show the result in flag register
+
+
+
+
+for unsigned int 
+
+ax = bx,         CF = 0         ZF = 1
+ax < bx,         CF = 1         ZF = 0
+ax <= bx,        CF = 1    or   ZF = 1
+
+ax > bx		 CF = 0         ZF = 0
+ax >= bx         CF = 0    or   ZF = 1
 
 
 
