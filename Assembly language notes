@@ -1736,6 +1736,32 @@ ax >= bx         CF = 0    or   ZF = 1
 
 
 
+For signed int
+
+ax = bx,	OF = 0		SF = 0		ZF = 1
+ax < bx, 	OF = 0		SF = 1
+		OF = 1		SF = 0
+
+ax > bx		OF = 0		SF = 0
+		OF = 1		SF = 1
+
+
+
+
+now based on flag register
+we can use different jmp instruction
+
+je	jmp if equal
+jne	jmp if nonequal
+
+jb	jmp if below
+jnb
+
+ja	jmp if above
+jna
+
+
+
 
 
 
