@@ -1761,9 +1761,405 @@ ja	jmp if above
 jna
 
 
+##################################################################################################################################
+
+DF Flag
+
+if DF = 1
+
+it's DN, means "down"
+
+else
+
+it's up, means "up"
 
 
 
+
+Instruction
+
+cld  		"clear DF"      DF = 0
+std 		"set DF"	DF = 1
+
+This is how you assign DF	
+
+
+;=============================================
+Serial Transport Instrution
+
+movsb         "mov serial byte"
+
+it can be interpreted as the following:
+
+''''
+mov byte ptr es:[di], ds:[si]       #in 80x86, this kind of instruction is not allowed
+
+if df = 0
+inc si
+inc di
+
+else
+dec si
+dec di
+''''
+
+
+From that, we know that we should also be allowed to directly transfer a word 
+
+movsw          "move serial word"
+
+it can be interpreted as the following:
+
+''''
+mov word ptr es:[di], ds:[si]
+
+if df= 0 
+add si, 2
+add di, 2
+
+
+else
+sub si, 2
+sub di, 2
+''''
+
+
+!
+Usually  we use instruction "rep" together with the above
+
+eg:
+
+rep movsw
+
+means:
+
+s:	movsw
+	loop s
+
+
+#######################################################################################################################################
+
+Instruction
+
+pushf and popf
+
+
+pushf
+
+push the value in flag register into stack, totally 16bit, so it's a word
+
+;=============================================
+
+popf
+
+pop out the value in stack into flag register
+
+#######################################################################################################################################
+#
+# Internal Interrupt
+#
+#######################################################################################################################################
+
+
+Interrupt
+
+For any general CPU, it should be able to detected a kind of information from CPU or outside after finishing the current  instructions, then
+it can immediately deal with that kind of information
+
+That kind of information is called "Interrupt Information"
+
+Here we just refer to the information coming from CPU internal
+
+
+#######################################################################################################################################
+
+The generation of Interrupt Information
+
+
+When the following cases occur, CPU generate corrsponding interrupt information
+
+1. Divide overflow
+2. Single step
+3. into instruction
+4. int instruction
+
+
+So once we give the interrupt information, we need a piece of program to deal with the things you want to do.
+
+CS:IP => where the program start
+
+we need to set cs:ip to be the start of the program when corresponding interrupt information is given
+
+
+
+The corresponding interrupt information is called Interrupt type code
+
+it tellswhere the information comes from, which is called interrupt origin
+
+eg.
+Interrupt origin	Interrupt type code
+Divide overflow		0
+Single step		1
+into			4
+int X			X
+
+
+Interrupt code is 8-bit
+#######################################################################################################################################
+
+How can we use a 8-bit number to find where the corresponding interrupt program start
+
+So we need a interrupt vector table
+
+
+
+Interrupt vector table 
+
+Program			Type code		address store the address of interrupt program
+"#0 program"        	0			0*4
+"#1 program"		1 			1*4
+
+so the address which stores the address of interrupt program start from Type code*4, as every address(CS:IP) totoally need 4B
+
+the lower address store the offset address, the higher address store the segment address
+eg.
+0*4 word ptr is IP for 0 program, 0*4 + 2 word ptr is CS for 0 program
+
+So totally we nee 256*4 Byte memory to store them.
+
+In 8086 CPU, it's from 0000:0000 to 0000:03FF
+
+
+
+!!
+Actually, you can try int 0, then you can directly call divide overflow even if you never make division
+#######################################################################################################################################
+
+Interrupt process
+
+
+1. Get the interrupt type code from the interrupt information   ->   N
+2. pushf
+3. set TF, IF = 0 (later i will discuss why)
+4. push cs
+5. push ip
+6. ip = N*4, CS = N*4+2
+
+#######################################################################################################################################
+
+Interrupt dealing program
+
+iret instruction
+
+in assemble, it's just
+
+pop ip
+pop cs
+popf
+
+
+########################################################################################################################################
+
+To implement a piece of interrupt program 
+
+we need to do
+
+1. install the interrupt program to a fixed position
+2. give the start address and store it in the interrupt program address space corresponding to its interrupt type code
+3. coding the interrupt program
+
+# As for the example , plz refer to the 0_program.asm
+#######################################################################################################################################
+
+Single step interrupt
+
+Basically , when CPU finishes executing an instruction, if the TF Flag is set to be 1, it will activate the following interrupt process
+
+1) the interrupt type code is 1
+2) pushf and then set TF, IF to be 0
+3) push CS, IP
+4) CS = 1*4+2, IP= 1*4
+
+
+
+First Question, why we need this kind of function?
+
+we will answer this in the end.
+
+
+In debug program, we use single step but how cpu does this. I mean it should normally execute all the instructions until to the end of the memory.
+
+HOwever, it's not the case so far. So to do single step, it has to set TF to be 1 to detect when you use the -t instruction so it shows the states 
+
+of all the registers and waiting for the coming instructions from users. 
+
+
+
+
+Here we should care that why we have to set TF, IF to be 0 after pushf, obviously if it's still one we will go to the interrupt process once again 
+
+and again. As for the result, we will keep executing the first instruction of this interrupt program. 
+
+
+
+
+
+
+
+Special Case
+
+
+we still remember when we execute mov ss, ax instructions the dosbox will also execute the mov sp  instruction. this is because as we have to pushf 
+
+to keep the origin states of register which will have to be shown. So at thsi moment only ss is changed but sp is not changed yet. So we will push 
+
+into a wrong stack. That's why for this case, the interrupt happened but cpu do not repond to it.
+
+
+#######################################################################################################################################
+
+int instruction
+
+its function is to activate the interrupt process.
+
+
+e.g int 0
+
+Even if you did not make any division, it will still show you overflow as it execute the overflow interrupt program.
+
+So as you can see, it call a program, like call instruction
+
+#######################################################################################################################################
+
+Bios and Dos interrupt process
+
+
+we know we can install our interrupt program by ourselves. 
+
+However, where does the default interrupt program like int 0 comes from? 
+
+It's set by bios when we start the computer.
+
+
+
+
+Bios (Basic input output system)
+
+it's also a program, but stored in ROM. it is mainly responsible for the following task:
+
+1) hardware check and the initiate program
+2) External interrupt and internal interrupt's interrupt process (stored in interrupt vector table)
+3) do interrupt process of I/O on hardware
+4) other interrupt process 
+
+
+How does bios install the interrupt program into memory ?
+
+1) when you start the computer, the cpu set the cs:ip to FFFF:0, so it will execute program from FFFF:0, and right there is a jmp instruction
+and it will jmp to execute the hardware check and the initiate program.
+
+2) The initiate program will then loaded the interrupt program's address into interrupt vector table. As these interrupt programs are located in
+ROM so we only need to load the address as it will never change
+
+3) After the hardware checkand initiation, it call int 19 to guide the operating system, now shift the control to operating system.
+
+4) when Dos is started, except other works, it also loads DOS interrupt process' s address into the interrupt vector table.
+#######################################################################################################################################
+#
+# Port
+#
+########################################################################################################################################
+
+in instruction:
+
+in al, 60H          # read in the data in 60H port
+
+out instruction:
+
+out 60H, al	    # write the data into 60H port
+
+
+;=============================================
+
+
+For 0-255 port
+
+in al, 20H
+out 20h, al
+
+we can directly read and write
+
+For 256-65535 port
+
+mov dx, 03f8H
+in al, dx
+out dx, al
+#######################################################################################################################################
+
+CMOS RAM chip
+
+In PC, there is always a CMOS RAM chip, 
+
+1) it contains a clock and 128 byte RAM
+
+2) it's charged by battery, so even the computer is out of charge, the clock still works and the information in RAM will not lose
+
+3) in the 128 byte RAM, the clock information is stored in 0-0dH memory, The left is used to store other information about system which will be
+read by Bios when the system starts.( Bios provide relative program for us to configure the system information in CMOS)
+
+4) It has two ports: 70H and 71H to read or write information
+
+5) 70H port is the address port, it's used to store which memory unit to visit. 71H port is the data port, it stores the data you want to write 
+or give the data you want to read
+#######################################################################################################################################
+
+shl , shr instruction
+
+shift left and shift right
+
+CF Flag will store the shift out bit
+
+
+#######################################################################################################################################
+#
+# External interrupt
+#
+########################################################################################################################################
+
+The external device has a lot of port chips. CPU treat them as ports through which CPU communicate with the external devices.
+
+
+The external interrupt information
+
+There are two kinds of external interrupt
+
+1)maskable interrupt
+
+it's the interrupt that CPU can choose not to respond. In CPU it based on the IF Flag.
+
+if IF = 1
+
+	After executing the current instructions, it will turn to deal with the interrupt
+
+	(1) it gets the interrupt type code n
+	(2) pushf, and set IF, TF = 0
+	(3) push CS, IP
+	(4) set IP = 0:[n*4], CS= 0:[n*4+2]
+
+
+Now it's sensible why we have to set IF, TF to be zero, because after we enter the interrupt program we can ignore other maskable interrupt programs
+
+in 8086CPU, 
+
+Instruction:
+
+sti 
+
+If = 1
+
+cli
+
+IF = 0
 
 
 
