@@ -252,7 +252,97 @@ put_hex_word:
 		popad
 		
 		retf
+
+
+
+;------------------------------------------------------------------------------------------
+; ========= Non public routine
+; input: ecx: the length of the memory we needed
+; return: ecx: the start address
+allocate_memory:
+
+		push ds
+		push eax
+		push ebx
+
+		mov eax, core_data_seg
+		mov ds, eax
 		
+		mov eax, [ram_alloc]				; give the start address of the available memory
+		add eax, ecx						; calculate out the start address for next allocating
+		
+		mov ecx, [ram_alloc]				; now we need to return the start address of this allocate
+
+		; test whether it over the whole memory
+		;cmp eax, ecx
+		;jng .ret_alloca_addr
+		
+		;hlt
+		
+	.ret_alloca_addr:
+		; although the ecx may already divides 512, for common use, we make it divides 4
+		mov ebx, eax
+		and ebx, 0xfffffffc
+		add ebx, 4
+		test eax, 0x00000003				; test whether the last two digits are zero or not
+		cmovnz eax, ebx								; if not zero, we use ebx
+		
+		mov [ram_alloc], eax
+		
+		pop ebx
+		pop eax
+		pop ds
+		
+		retf
+
+;------------------------------------------------------------------------------------------
+; ========= Non public routine
+; input: edx:eax store the descriptor
+; return: cx store the selector
+set_up_gdt_descriptor:
+
+		push ds
+		push es
+		
+		push eax
+		push ebx
+		push edx
+		
+		mov ebx, core_data_seg
+		mov ds, ebx
+		
+		sgdt [pgdt]
+		
+		mov ebx, whole_data_seg						; let es to point to the whole memory
+		mov es, ebx
+		
+		movzx ebx, word [pgdt]						; let bx store the bound of the gdt (offset)
+		inc bx										; avoid unecessary overflow so we don't inc ebx
+		add ebx, [pgdt+0x02]						; so we get the next descriptor absolute address
+		
+		mov [es:ebx], eax
+		mov [es:ebx+0x04], edx
+		
+		add word [pgdt], 8							; update the bound of the gdt
+		
+		lgdt [pgdt]
+		
+		mov ax, [pgdt]								; give eax the bound of the gdt(always the multiple of 8 - 1)
+		mov ecx, 8
+		xor edx, edx
+		div cx
+		mov cx, ax									; we don't need the remainder and now we get how many it is in the gdt
+		shl cx, 3
+		
+		pop edx
+		pop ebx
+		pop eax
+		
+		pop es
+		pop ds
+		
+		retf
+
 ;-------------------------------------------------------------------------------------------
 ; ========= Non public routine
 ; input:
@@ -281,7 +371,8 @@ make_gate_descriptor:
 ;===========================================================================================
 SECTION core_data vstart=0
 
-
+pgdt		dw 0				; it store the size of gdt
+			dd 0				; it store the start address of gdt
 
 ; C-salt
 salt:
@@ -311,6 +402,8 @@ salt_items:		db ($-salt)/salt_item_lens
 bin_hex:	db '0123456789ABCDEF'
 
 message_1:	db "Protection mode on.", 0x0d, 0x0a, 0
+message_2:	db ' System CALL-GATE mounted', 0x0d, 0x0a, 0
+message_3:	db 0x0d, 0x0a, '	Load User program...', 0
 
 cpu_brand0:	db 0x0d, 0x0a, '  ', 0
 cpu_brand: 	times 52 db 0
@@ -377,7 +470,28 @@ start:	mov eax, core_data_seg
 		mov cx, 1_11_0_1100_000_00000B				; P:1	DPL: 11	0	TYPE:code and depend	000	parametr_#: 00000
 		call core_routine_seg:make_gate_descriptor
 		call core_routine_seg:set_up_gdt_descriptor
+
+		; re-write cx( the routine's gate descriptor ) to core_data_segment
+		mov word [edi+260], cx
+		add edi, salt_item_lens						; jump to next routine
+
+		pop ecx										; get the loop number pop out
+		loop .install_gates
 		
+		; after make the gate descriptor
+		; test PrintString gate
+		mov ebx, message_2
+		call far [salt_1+256]
+
+		; show the message of " Loading User program..."
+		mov ebx, message_3
+		call core_routine_seg:put_string
+
+		; begin to allocate user's program
+		; establish a TCB for task
+		mov ecx, 0x46
+		call core_routine_seg:allocate_memory
+
 return_point:
 
 		hlt
