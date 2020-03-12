@@ -10,7 +10,7 @@
 		core_routine_seg	equ 0x28		; kernel routine segment descriptor
 		video_ram_seg		equ 0x20		; video cache segment descriptor
 		core_stack_seg		equ 0x18		; kernel stack segment descriptor
-		whole_mem_seg		equ 0x08		; 4 GB data segment
+		whole_data_seg		equ 0x08		; 4 GB data segment
 		
 
 		[bits 32]
@@ -374,6 +374,8 @@ SECTION core_data vstart=0
 pgdt		dw 0				; it store the size of gdt
 			dd 0				; it store the start address of gdt
 
+tcb_chain_header	dd 0		; it store the absolute address of the header of TCB linked list
+
 ; C-salt
 salt:
 salt_1:		db '@PrintString'
@@ -413,9 +415,119 @@ cpu_brand1:	db 0x0d, 0x0a, 0x0d, 0x0a, 0
 
 ;============================================================================================
 SECTION core_code vstart=0		
+
+;--------------------------------------------------------------------------------------------
+; load the user program
+; input:	PUSH sector number
+; 			PUSH the address of corresponding TCB
+load_allocate_program:
+		pushad
+
+		push ds
+		push es
+
+		mov ebp, esp					
 		
+		mov eax, whole_data_seg
+		mov	es, eax
+
+		mov esi, [ebp+11*4]						; let esi store the address of TCB
+
+		; allocate LDT's memory
+		mov ecx, 160							; allow 20 LDT descriptor
+		call core_routine_seg:allocate_memory
+		mov [es:esi+0x0c], ecx					; give the TCB the address of LDT
+		mov word [es:esi+0x0a], 0xFFFF			; give the offset bound of the LDT, which is the length - 1, now it's 0 - 1
+
+		; read the user program from hard disk
+		mov eax, core_data_seg
+		mov ds, eax
+
+		mov eax, [ebp+12*4]						; get the sector number
+		mov ebx, core_buf
+		call core_routine_seg:read_hard_disk_0
+
+		; get the size of the program
+		mov eax, [core_buf]
+		mov ebx, eax							; make it align to 512B
+		and ebx, 0xfffffe00
+		add ebx, 512
+		test eax, 0x00001ff
+		cmovnz eax, ebx
+
+		mov ecx, eax							; give ecx the size of program
+		call core_routine_seg:allocate_memory
+		mov [es:esi+0x06], ecx					; update the base addr of program to TCB
+
+		; calculate how many sectors to use
+		mov ebx, ecx
+		xor edx, edx
+		mov ecx, 512
+		div ecx
+		mov ecx, eax							; ecx store how many sectors to set loop
+
+		mov eax, whole_data_seg					
+		mov ds, eax
+
+		mov eax, [ebp+12*4]
+	.read_each_sector:
 		
+
+
+
+
+
+
+
 		
+;--------------------------------------------------------------------------------------------
+; append to TCB link list
+; input: ecx: the start address of the TCB to append
+; return: ecx: origin value
+append_to_TCB_link:
+		push eax
+		push edx
+		push ds
+		push es
+
+		; let ds point to the core data segment because the address of header of the TCB linked list in it
+		mov eax, core_data_seg
+		mov ds, eax
+
+		; let es point to the whole data because ecx should be the absolute address of TCB
+		mov eax, whole_data_seg
+		mov es, eax
+
+		mov dword [es:ecx+0x00], 0				; the next TCB pointer should be zero
+
+		mov eax, [tcb_chain_header]				; get the address of next TCB pointer
+		or eax, eax								; check whether the next pointer is 0
+		jz TCB_link_is_empty					; if 0 that means currently TC linked list is empty
+
+	; otherwise the TCB linked list is not empty, looply get to the trail
+	.TCB_link_to_trail:
+		mov edx, eax
+		mov eax, [es:edx+0x00]					; get the next TCB address
+		or eax, eax								; see if it's 0
+		jnz .TCB_link_to_trail					; not 0 means not trail
+
+		; if trail
+		mov [es:edx+0x00], ecx
+		jmp .append_to_TCB_link_ret
+
+	.TCB_link_is_empty:
+		mov [tcb_chain_header], ecx				; the current is the header
+
+	.append_to_TCB_link_ret:
+		pop es
+		pop ds
+		pop edx
+		pop eax
+		ret
+
+
+;--------------------------------------------------------------------------------------------
+; main program
 start:	mov eax, core_data_seg
 		mov ds, eax
 
@@ -491,6 +603,11 @@ start:	mov eax, core_data_seg
 		; establish a TCB for task
 		mov ecx, 0x46
 		call core_routine_seg:allocate_memory
+		call append_to_TCB_link
+
+		push dword 50
+		push ecx
+		call load_allocate_program
 
 return_point:
 
