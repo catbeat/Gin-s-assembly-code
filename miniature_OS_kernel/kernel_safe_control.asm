@@ -164,6 +164,7 @@ put_char:
 ; input: 
 ;		eax : the sector number
 ;		ds:ebx : the start address for loading the sector
+; return: ebx : the end after loading
 read_hard_disk_0:
 		push eax
 		push ecx
@@ -297,6 +298,30 @@ allocate_memory:
 
 ;------------------------------------------------------------------------------------------
 ; ========= Non public routine
+; make descriptor
+; input: 
+;		eax store the base address
+; 		ebx store the length of the code - 1 to stand for the bound
+; 		ecx store the TYPE
+; return edx:eax as the descriptor
+make_seg_descriptor:
+
+		mov edx, eax
+		shl eax, 16
+		or ax, bx									;mov ax, bx
+	
+		rol edx, 8
+		bswap edx
+		and edx, 0xFF0000FF
+
+		and ebx, 0xffff0000
+		or edx, ebx
+		or edx, ecx
+	
+		retf
+
+;------------------------------------------------------------------------------------------
+; ========= Non public routine
 ; input: edx:eax store the descriptor
 ; return: cx store the selector
 set_up_gdt_descriptor:
@@ -414,7 +439,56 @@ cpu_brand1:	db 0x0d, 0x0a, 0x0d, 0x0a, 0
 
 
 ;============================================================================================
-SECTION core_code vstart=0		
+SECTION core_code vstart=0
+
+;--------------------------------------------------------------------------------------------
+; update the descriptor to LDT
+; input:
+;		edx:eax the descriptor
+;		ebx the address of current task's TCB
+; output:
+;		cx: the selector of the descriptor in LDT
+fill_descriptor_to_LDT:
+
+		push eax
+		push ebx
+		push edx
+		push ds
+
+		mov ecx, whole_data_seg
+		mov ds, ecx
+
+		mov edi, [ebx+0x0c]							; get the base addr of LDT
+
+		xor ecx, ecx
+		mov cx, [ebx+0x0a]							; cx is the bounf of LDT
+		inc cx										; the start addr for next descriptor
+
+		; install
+		mov [edi+ecx+0x00], eax
+		mov [edi+ecx+0x04], edx
+
+		; update the bound of LDT
+		add cx, 8
+		dec cx
+		mov [ebx+0x0a], cx
+
+		; return selector of descriptor
+		mov ax, cx
+		xor dx, dx
+		mov cx, 8
+		div cx
+
+		mov cx, ax
+		shr cx, 3
+		or cx, 0000_0000_0000_0100B					; set the T1 to be 1
+
+		pop ds
+		pop edx
+		pop ebx
+		pop eax
+
+		ret
 
 ;--------------------------------------------------------------------------------------------
 ; load the user program
@@ -460,7 +534,7 @@ load_allocate_program:
 		mov [es:esi+0x06], ecx					; update the base addr of program to TCB
 
 		; calculate how many sectors to use
-		mov ebx, ecx
+		mov ebx, ecx							; ebx store the start address to load
 		xor edx, edx
 		mov ecx, 512
 		div ecx
@@ -469,11 +543,123 @@ load_allocate_program:
 		mov eax, whole_data_seg					
 		mov ds, eax
 
-		mov eax, [ebp+12*4]
+		mov eax, [ebp+12*4]						; eax to nominate the sector nuber
 	.read_each_sector:
-		
+		call core_routine_seg:read_hard_disk_0
+		inc eax
+		loop .read_each_sector
 
+		; set descriptor for the parts of user program
+		mov edi, [es:esi+0x06]					; edi store the start address of program
 
+		; set the descriptor for the program' header
+		mov eax, edi							; the start addr of header
+		mov ebx, [es:edi+0x04]					; the bound of header
+		dec ebx
+		mov ecx, 0x0040f200						; in Byte, data type, DPL 3
+		call core_routine_seg:make_seg_descriptor
+
+		; update the desrciptor to LDT
+		mov ebx, esi
+		call fill_descriptor_to_LDT			
+
+		or cx, 0000_0000_0000_0011B				; set the RPL to be 3
+
+		mov [es:esi+0x44], cx					; update the selector of header descriptor to TCB
+		mov [edi+0x04], cx						; together in the program
+
+		; set the descriptor for the program's code segment
+		mov eax, edi
+		add eax, [edi+0x14]						; the start addr of code seg
+		mov ebx, [edi+0x18]						; the bound of code seg
+		dec ebx
+		mov ecx, 0x0040f800						; in Byte, data type, DPL 3
+		call core_routine_seg:make_seg_descriptor
+
+		mov ebx, esi
+		call fill_descriptor_to_LDT
+
+		or cx, 0000_0000_0000_0011B				; RPL 3
+		mov [edi+0x14], cx						; update the selector of code seg to header
+
+		; set the descriptor for the program's data segment
+		mov eax, edi
+		add eax, [edi+0x1c]						; the start addr of data seg
+		mov ebx, [edi+0x20]						; the bound of data seg
+		dec ebx
+		mov ecx, 0x0040f200						; in byte, data type, DPL 3
+		call core_routine_seg:make_seg_descriptor
+
+		mov ebx, esi
+		call fill_descriptor_to_LDT
+
+		or cx, 0000_0000_0000_0011B				; RPL 3
+		mov [edi+0x1c], cx						; update the selector of data seg to header
+
+		; set the descriptor for the program's local stack segment
+		mov ecx, [edi+0x0c]						; in 4KB
+		mov ebx, 0x000fffff						; the bound of stack
+		sub ebx, ecx
+		mov eax, 4096
+		mul ecx
+		mov ecx, eax							; the size to allocate memory for stack
+		call core_routine_seg:allocate_memory
+
+		add eax, ecx							; the start addr for stack
+		mov ecx, 0x00c0f600						; in 4KB, stack type, DPL 3
+		call core_routine_seg:make_seg_descriptor
+
+		mov ebx, esi
+		call fill_descriptor_to_LDT
+
+		or cx, 0000_0000_0000_0011B
+		mov [edi+0x08], cx
+
+		; redirect the user program salt
+		mov eax, whole_data_seg
+		mov es, eax
+
+		cld
+
+		mov ecx, [es:edi+0x24]					; how many salt items
+		add edi, 0x28							; redirect edi to the start of salt
+
+	.cmp_each_salt_items:
+		push ecx
+		push edi
+
+		mov ecx, salt_items
+		mov esi, salt
+	.cmp_a_salt_item:
+		push ecx
+		push edi
+		push esi
+
+		mov ecx, 64
+		repe cmpsd
+
+		jnz .
+
+		mov eax, [esi]
+		mov [es:edi-256], eax
+		mov ax, [esi+0x04]
+		or ax, 0000_0000_0000_0011B				; give the call gate CPL
+		mov [es:edi-252], ax
+
+	.not_cop_gate:
+
+		pop esi
+		pop edi
+		pop ecx
+
+		add esi, salt_item_lens
+
+		loop .cmp_a_salt_item					; cmp next one in C-salt
+
+		pop edi
+		pop ecx
+		add edi, 256
+		loop .cmp_each_salt_items				; cmp next one in user salt
 
 
 
