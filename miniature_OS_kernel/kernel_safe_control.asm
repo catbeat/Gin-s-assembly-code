@@ -661,8 +661,70 @@ load_allocate_program:
 		add edi, 256
 		loop .cmp_each_salt_items				; cmp next one in user salt
 
+		mov esi, [bp+11*4]						; esi store the start addr of TCB
 
+		; create DPL 0, 1, 2 stack for user program
+		; create DPL 0 stack
+		mov ecx, 4096
+		mov eax, ecx							; prepare for calculating the top address of stack
+		mov [es:esi+0x1a], ecx
+		shr dword [es:esi+0x1a], 12				; The size should be in 4KB unit
+		call core_routine_seg:allocate_memory
 
+		add eax, ecx							; get the top(start) addr of 0 stack
+		mov [es:esi+0x1e], eax					; update it in TCB
+		mov ebx, 0x000ffffe						; set the bound of 
+		mov ecx, 0x00c09600						; DPL 0, in 4KB, type stack
+
+		call core_routine_seg:make_seg_descriptor
+		mov ebx, esi
+		call fill_descriptor_to_LDT				; update the descriptor to LDT
+
+		mov [es:esi+0x22], cx					; the RPL of the selector are already zero
+		mov dword [es:esi+0x24], 0				; give the initial ESP value
+
+		; create DPL 1 stack
+		mov ecx, 4096
+		mov eax, ecx							; prepare for calculating the top address of stack
+		mov [es:esi+0x28], ecx
+		shr dword [es:esi+0x28], 12				; The size should be in 4KB unit
+		call core_routine_seg:allocate_memory
+
+		add eax, ecx							; get the top(start) addr of 0 stack
+		mov [es:esi+0x2c], eax					; update it in TCB
+		mov ebx, 0x000ffffe						; set the bound of 
+		mov ecx, 0x00c0b600						; DPL 1, in 4KB, type stack
+
+		call core_routine_seg:make_seg_descriptor
+		mov ebx, esi
+		call fill_descriptor_to_LDT				; update the descriptor to LDT
+
+		or cx, 0000_0000_0000_0001B				; the RPL should be 1
+		mov [es:esi+0x30], cx					
+		mov dword [es:esi+0x32], 0				; give the initial ESP value
+
+		; create DPL 2 stack
+		mov ecx, 4096
+		mov eax, ecx							; prepare for calculating the top address of stack
+		mov [es:esi+0x36], ecx
+		shr dword [es:esi+0x36], 12				; The size should be in 4KB unit
+		call core_routine_seg:allocate_memory
+
+		add eax, ecx							; get the top(start) addr of 0 stack
+		mov [es:esi+0x3a], eax					; update it in TCB
+		mov ebx, 0x000ffffe						; set the bound of 
+		mov ecx, 0x00c0d600						; DPL 2, in 4KB, type stack
+
+		call core_routine_seg:make_seg_descriptor
+		mov ebx, esi
+		call fill_descriptor_to_LDT				; update the descriptor to LDT
+
+		or cx, 0000_0000_0000_0010B				; the RPL should be 1
+		mov [es:esi+0x3e], cx					
+		mov dword [es:esi+0x40], 0				; give the initial ESP value
+
+		; load LDT descriptor to GDT
+		
 
 
 		
