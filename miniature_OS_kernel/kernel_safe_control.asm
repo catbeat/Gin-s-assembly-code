@@ -724,7 +724,64 @@ load_allocate_program:
 		mov dword [es:esi+0x40], 0				; give the initial ESP value
 
 		; load LDT descriptor to GDT
-		
+		mov eax, [es:esi+0x0c]					; base addr for LDT
+		movzx ebx, word [es:esi+0x0a]			; zero extended the bound
+		mov ecx, 0x00408200						; LDT descriptor, DPL = 0
+
+		call core_routine_seg:make_seg_descriptor
+		call core_routine_seg:set_up_gdt_descriptor
+		mov [es:esi+0x10], cx					; register the selector to TCB
+
+		; create the user program TSS
+		mov ecx, 104							; the basic size of TSS
+		mov [es:esi+0x12], cx
+		dec word [es:esi+0x12]					; register the bound to the TCB
+		call core_routine_seg:allocate_memory
+		mov [es:esi+0x14], ecx					; register TSS base addr to TCB
+
+		; update the TSS
+		mov word [es:ecx+0], 0					; the previous task is 0 here.
+
+		mov edx, [es:esi+0x24]					; update the DPL 0 stack original esp
+		mov [es:ecx+4], edx
+
+		mov dx, [es:esi+0x22]					; update the DPL 0 stack segment
+		mov [es:ecx+8], dx
+
+		mov edx, [es:esi+0x32]					; update the DPL 1 stack original esp
+		mov [es:ecx+12], edx
+
+		mov dx, [es:esi+0x30]					; update the DPL 1 stack segment
+		mov [es:ecx+16], dx		
+
+		mov edx, [es:esi+0x40]					; update the DPL 2 stack original esp
+		mov [es:ecx+20], edx
+
+		mov dx, [es:esi+0x3e]					; update the DPL 2 stack segment
+		mov [es:ecx+24], dx
+
+		mov dx, [es:esi+0x10]					; update the LDT selector						
+		mov [es:ecx+96], dx					
+
+		mov dx, [es:esi+0x12]					; update the task's I/O offset
+		mov [es:ecx+102], dx
+
+		mov word [ es:ecx+100], 0				; update the T bit
+
+		; update TSS descriptor to GDT
+		mov eax, ecx							; give the base addr
+		movzx ebx, word [es:esi+0x12]			; give the bound
+		mov ecx, 0x00408900
+		call core_routine_seg:make_seg_descriptor
+		call core_routine_seg:set_up_gdt_descriptor
+		mov [es:esi+0x18]						; update the descriptor to TCB
+
+		pop es
+		pop ds
+
+		popad
+
+		ret 8
 
 
 		
