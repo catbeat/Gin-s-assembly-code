@@ -432,6 +432,8 @@ message_1:	db "Protection mode on.", 0x0d, 0x0a, 0
 message_2:	db ' System CALL-GATE mounted', 0x0d, 0x0a, 0
 message_3:	db 0x0d, 0x0a, '	Load User program...', 0
 
+do_status:	db "Done.", 0x0d, 0x0a, 0
+
 cpu_brand0:	db 0x0d, 0x0a, '  ', 0
 cpu_brand: 	times 52 db 0
 cpu_brand1:	db 0x0d, 0x0a, 0x0d, 0x0a, 0
@@ -784,7 +786,6 @@ load_allocate_program:
 		ret 8
 
 
-		
 ;--------------------------------------------------------------------------------------------
 ; append to TCB link list
 ; input: ecx: the start address of the TCB to append
@@ -910,15 +911,44 @@ start:	mov eax, core_data_seg
 		call core_routine_seg:allocate_memory
 		call append_to_TCB_link
 
+		; give where is the user program and prepare for it
 		push dword 50
 		push ecx
 		call load_allocate_program
 
+		; after we relocate the user program to make it prepared for control by OS
+		mov ebx, do_status												; print debug message for finishing
+		call core_routine_seg:put_string
+
+		mov eax, whole_data_seg
+		mov ds, eax
+
+		ltr [ecx+0x18]								; from TCB load the TSS
+		lldt [ecx+0x10]							    ; from TCB load the LDT
+
+		mov eax, [ecx+0x44]							; from TCB load the header selector of user program
+		mov ds, eax
+
+		; to call the user program, we pretend we are return back from a call gate, basically treat the whole OS as a called gate
+		push dword [0x08]							; push the stack selector
+		push dword 0								; push esp
+
+		push dword [0x14]							; push the code selector
+		push dword [0x10]							; push eip
+
+		retf
+
 return_point:
+		mov eax, core_data_seg
+		mov ds, eax
+
+		mov ebx, message_6
+		call core_routine_seg:put_string
 
 		hlt
 		
+core_code_end:
 ;===========================================================================================
 SECTION trail
 
-		core_end:	
+core_end:	
