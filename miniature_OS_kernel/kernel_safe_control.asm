@@ -438,7 +438,13 @@ cpu_brand0:	db 0x0d, 0x0a, '  ', 0
 cpu_brand: 	times 52 db 0
 cpu_brand1:	db 0x0d, 0x0a, 0x0d, 0x0a, 0
 
+;--------------------------------------------------------------------------------------------
+; following is the OS main task data segment which track the TSS of OS main task
+; this is to store 
+program_tss: dd 0
+			 dw 0
 
+program_msg1: db "Hello. I am OS program manager. I am going to call your porgram...", 0x0d, 0x0a, 0
 
 ;============================================================================================
 SECTION core_code vstart=0
@@ -900,43 +906,45 @@ start:	mov eax, core_data_seg
 		; test PrintString gate
 		mov ebx, message_2
 		call far [salt_1+256]
+		; finishing installing the call gate
 
-		; show the message of " Loading User program..."
-		mov ebx, message_3
-		call core_routine_seg:put_string
+		; Now we establishing the TSS for kernel task
+		mov ecx, 104
+		call core_routine:allocate_memory
+		mov [program_tss+0x00], ecx					; store the start address of TSS
 
-		; begin to allocate user's program
-		; establish a TCB for task
-		mov ecx, 0x46
-		call core_routine_seg:allocate_memory
-		call append_to_TCB_link
+		; configure the kernel's TSS
 
-		; give where is the user program and prepare for it
-		push dword 50
-		push ecx
-		call load_allocate_program
+		mov word [es:ecx+0x96], 0					; don't need LDT, so selector just use null selector			
+		mov word [es:ecx+102], 102					; no I/O setting, because it can access all the IO
+		mov word [es:ecx+0x00], 0					; no last task
+		mov word [es:ecx+0x28], 0					; register CR3, as  all segment can be registered on GDT
+		mov word [es:ecx+0x100], 0					; T = 0 as no need for DPL 0, 1, 2 stack
 
-		; after we relocate the user program to make it prepared for control by OS
-		mov ebx, do_status												; print debug message for finishing
-		call core_routine_seg:put_string
+		; set kernel's TSS descriptor
+		mov eax, ecx								; give the base addr
+		mov ebx, 103								; give the bound of TSS
+		mov ecx, 0x00408900							; give the properties of the TSS
+		call core_routine:make_seg_descriptor
+		call core_routine:set_up_gdt_descriptor
+		mov word [program_tss+0x04], cx				; store the selector of TSS
 
-		mov eax, whole_data_seg
-		mov ds, eax
+		; gvie TR the selector so that it mains the OS kernel task is running now
+		ltr cx
 
-		ltr [ecx+0x18]								; from TCB load the TSS
-		lldt [ecx+0x10]							    ; from TCB load the LDT
+		mov ebx, program_msg1
+		call core_routine:put_string
 
-		mov eax, [ecx+0x44]							; from TCB load the header selector of user program
-		mov ds, eax
+		
 
-		; to call the user program, we pretend we are return back from a call gate, basically treat the whole OS as a called gate
-		push dword [0x08]							; push the stack selector
-		push dword 0								; push esp
 
-		push dword [0x14]							; push the code selector
-		push dword [0x10]							; push eip
 
-		retf
+
+	
+
+
+
+		
 
 return_point:
 		mov eax, core_data_seg
